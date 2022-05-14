@@ -15,7 +15,9 @@ defmodule Limiter.Application do
       # Start the PubSub system
       {Phoenix.PubSub, name: Limiter.PubSub},
       # Start the Endpoint (http/https)
-      LimiterWeb.Endpoint
+      LimiterWeb.Endpoint,
+      {Cachex, [name: :rate_limiter]}
+
       # Start a worker by calling: Limiter.Worker.start_link(arg)
       # {Limiter.Worker, arg}
     ]
