@@ -1,19 +1,28 @@
-# Limiter
+# limiter :: a rate-limiting plug
 
-To start your Phoenix server:
+- can be added to the router at any level
+- can be re-used multiple times w/ a different configuration (each plug generating its own counter table)
+- accepts a configuration when called:
 
-  * Install dependencies with `mix deps.get`
-  * Create and migrate your database with `mix ecto.setup`
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+  - supporting different limiting strategies:
+    - (required) by header (ex. `X-HAWKU-TOKEN`)
+    - (nice to have) by IP
+    - (nice to have) by combination of different data (ex. multiple headers and IP)
+  - cachex counter table name
+  - requests allowed
+  - timeframe
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+- if over the limit, return code `429` with `Retry-After` amount of milliseconds the user should wait to make another request and json with an error message.
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+- (Nice to have) Support receiving and sending extra headers with the status of the rate-limiting counter:
 
-## Learn more
+  - `X-Rate-Limit: 700`
+  - `X-Rate-Limit-Remaining: 699`
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+- Use Cachex to store
+  - counter
+  - api_user_id_field
+  - current_rate
+  - last_request_received_at
+
+> assume there's a 1:1 correspondence between the value for X-HAWKU-TOKEN and each client's unique identifier given by api_user_id_field
