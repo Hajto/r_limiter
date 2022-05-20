@@ -8,6 +8,7 @@ defmodule LimiterWeb.Router do
     plug :put_root_layout, {LimiterWeb.LayoutView, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug RateLimiter
   end
 
   pipeline :api do
