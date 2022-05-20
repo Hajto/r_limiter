@@ -31,6 +31,8 @@ defmodule RateLimiter do
     #   IO.inspect(c)
     # end
     conn
+
+    # Plug.Conn.Status.code(429)
     # conn
     # get_cache_name(opts)
     # |> Cachex.incr(cache_key_from_token(token))
@@ -49,18 +51,6 @@ defmodule RateLimiter do
     conn
     |> validate_user(opts)
     |> update_cache(opts)
-    # |> IO.inspect(label: :pipe)
-
-    # Cachex.start_link(@default_cache_name, id: 1)
-    # IO.inspect(conn, label: :conn)
-    # conn
-    # |>
-    # |> IO.inspect(label: :pipe)
-
-
-    # IO.inspect(conn, label: :conn)
-    # assign(conn, :locale, default)
-    conn
   end
 
   # headers hardcoded to user ID - assume that anyone w/ a hawku token is valid

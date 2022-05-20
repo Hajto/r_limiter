@@ -20,7 +20,6 @@ defmodule LimiterWeb.RateLimiterTest do
     @defaults_a [name: :group_a, req_count: 5]
 
     test "things", %{conn: conn} do
-      # IO.inspect(conn, label: :conn)
 
       RateLimiter.init([])
       # RateLimiter.init(@defaults_a)
@@ -33,9 +32,6 @@ defmodule LimiterWeb.RateLimiterTest do
         # |> IO.inspect(label: :pipe)
 
       IO.inspect(conn.assigns, label: :conn)
-      # IO.inspect(conn, label: :conn)
-      # c = Cachex.get(:cats, :q)
-      # IO.inspect(c, label: :c)
     end
 
   end
