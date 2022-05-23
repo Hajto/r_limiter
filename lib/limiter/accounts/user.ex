@@ -12,6 +12,6 @@ defmodule Limiter.Accounts.User do
   def changeset(user, attrs) do
     user
     |> cast(attrs, [:hawku_token])
-    |> validate_required([:hawku_token])
+    # |> validate_required([:hawku_token])
   end
 end

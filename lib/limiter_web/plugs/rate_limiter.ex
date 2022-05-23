@@ -5,7 +5,7 @@ defmodule RateLimiter do
   alias LimiterWeb.Router.Helpers, as: Routes
 
   alias Limiter.Accounts
-  @default_req_count 1
+  @default_req_count 2
   # in seconds
   @default_timeframe 1
   @default_name :rate_limiter_cache
@@ -20,26 +20,47 @@ defmodule RateLimiter do
 
   def call(conn, opts \\ @defaults) do
     conn
-    |> validate_user(opts)
+    |> validate_user()
     |> update_cache(opts)
+  end
+  # headers hardcoded to user ID - assume that anyone w/ a hawku token is valid
+  defp validate_user(conn) do
+    case get_token(conn) do
+      nil ->
+        conn
+        |> put_flash(:error, "unauthorized")
+        |> redirect(to: Routes.page_path(conn, :index))
+        |> halt()
+
+      _token -> conn
+    end
+  end
+
+  defp update_cache(%{halted: true} = conn, _opts), do: conn
+
+  defp update_cache(conn, opts) do
+    conn
+    |> lookup_cache(opts)
+    |> verify_key_existence(opts)
+    |> check_rate(opts)
+  end
+
+  def get_token(conn) do
+    conn
+    |> get_session(:user_id)
+    |> Accounts.get_user!()
+    |> Map.get(:hawku_token)
   end
 
   defp cache_name(opts), do: Keyword.get(opts, :name, @default_name)
   defp req_count(opts), do: Keyword.get(opts, :req_count, @default_req_count)
   defp timeframe(opts), do: Keyword.get(opts, :timeframe, @default_timeframe)
-  defp stringified_token(opts), do: opts |> token_name() |> Atom.to_string()
-  defp token_name(opts), do: Keyword.get(opts, :token, @default_token)
-  defp get_user_from_token("") do
-    nil
-  end
-  defp get_user_from_token(val) do
-    val
-    |> Accounts.get_user_by_token()
-    |> Map.get(:id)
-  end
 
-  defp lookup_cache(conn, opts), do: {conn, cache_name(opts), conn.assigns[:user_id]}
+  defp lookup_cache(conn, opts), do: {conn, cache_name(opts), get_session(conn, :user_id)}
 
+  # initialize key if it doesn't already exist
+  # the value is a map with two properties: the count of connections
+  # and the timestamp for the most recent request
   defp verify_key_existence({conn, cache_name, key}, opts) do
     case Cachex.exists?(cache_name, key) do
       {_, true} -> nil
@@ -81,26 +102,6 @@ defmodule RateLimiter do
         |> put_resp_header("x-rate-limit", req_count(opts) |> Integer.to_string())
         |> put_resp_header("x-rate-limit-remaining", (new_counter - 1) |> Integer.to_string())
         |> put_flash(:info, "success")
-    end
-  end
-
-  defp update_cache(conn, opts) do
-    conn
-    |> lookup_cache(opts)
-    |> verify_key_existence(opts)
-    |> check_rate(opts)
-  end
-
-  # headers hardcoded to user ID - assume that anyone w/ a hawku token is valid
-  defp validate_user(conn, opts) do
-    case get_req_header(conn, stringified_token(opts)) do
-      [""] ->
-        conn
-        |> put_flash(:error, "unauthorized")
-        # |> redirect(to: Routes.page_path(conn, :index))
-        |> halt()
-      [token] ->
-        assign(conn, :user_id, get_user_from_token(token))
     end
   end
 end
