@@ -93,6 +93,7 @@ defmodule RateLimiter do
         |> put_resp_header("retry-after", Date.to_string(time_diff))
         |> halt()
       _ ->
+        IO.inspect(new_counter, label: :new_counter)
         Cachex.update(cache_name, key, %{
           counter: new_counter - 1,
           last_req_recvd_at: time_diff

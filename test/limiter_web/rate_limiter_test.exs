@@ -11,32 +11,23 @@ defmodule LimiterWeb.RateLimiterTest do
       counter
     end
 
-    defp setup_session(conn, user_id, token) do
-      conn
-      |> init_test_session(%{user_id: user_id})
-      |> put_req_header("hawku", token)
-    end
-
     setup %{conn: conn} do
-      %{hawku_token: token} = user = user_fixture()
-
-      conn =
-        conn
-        |> init_test_session(%{user_id: user.id})
-        |> put_req_header("hawku", token)
-
-      %{conn: conn, user: user}
+      %{conn: conn, user: user_fixture(), invalid_user: user_fixture(%{hawku_token: nil})}
     end
 
     @custom [name: :group_a, req_count: 5]
 
     test "rate limits authorized users", %{conn: conn, user: user} do
+
+      conn = conn
+      |> init_test_session(%{user_id: user.id})
+      |> put_req_header("hawku", user.hawku_token)
+
       RateLimiter.init()
       conn =
         conn
         |> fetch_flash()
         |> RateLimiter.call()
-        # |> RateLimiter.call(@custom)
 
       assert get_flash(conn, :info) == "success"
       assert get_counter(:rate_limiter_cache, user.id) == 1
@@ -68,26 +59,26 @@ defmodule LimiterWeb.RateLimiterTest do
         |> fetch_flash()
         |> RateLimiter.call()
 
-      # assert get_flash(conn, :info) == "success"
+      assert get_flash(conn, :info) == "success"
       assert get_counter(:rate_limiter_cache, user.id) > 0
     end
 
-    # test "does not apply to unauthorized users", %{conn: conn} do
-    #   user2 = user_fixture(%{hawku_token: nil})
+    test "does not apply to unauthorized users", %{conn: conn, invalid_user: user} do
+      conn = init_test_session(conn, %{user_id: user.id})
+      RateLimiter.init(@custom)
 
-    #   RateLimiter.init(@custom)
+      conn =
+        conn
+        # |> delete_req_header("hawku")
+        |> init_test_session(id: "unauth")
+        |> put_session(:user_id, user.id)
+        |> fetch_flash()
+        |> RateLimiter.call(@custom)
 
-    #   conn =
-    #     conn
-    #     |> delete_req_header("hawku")
-    #     |> init_test_session(id: "unauth")
-    #     |> put_session(:user_id, user2.id)
-    #     |> fetch_flash()
-    #     # |> recycle()
-    #     |> RateLimiter.call(@custom)
-
-    #     assert get_flash(conn, :error) == "unauthorized"
-    #     assert get_counter(:group_a, user2.id) == 5
-    # end
+        assert get_flash(conn, :error) == "unauthorized"
+        {:ok, val} = Cachex.exists?(:group_a, user.id)
+        refute val
+        # assert get_counter(:group_a, user.id) == 5
+    end
   end
 end
